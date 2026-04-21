@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Daily Report Tool</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #87c7d8;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: auto;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-size: 18px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .radio-group {
+      margin-top: 10px;
+    }
+
+    .radio-group.error {
+      border: 2px solid red;
+      padding: 5px;
+    }
+
+    button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background: black;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .issueInput {
+      margin-top: 5px;
+    }
+
+    .error {
+      border: 2px solid red !important;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <label>Date:</label>
+  <input type="date" id="date">
+
+  <label>Line:</label>
+  <select id="line">
+    <option>CKD Packing Line</option>
+    <option>SKD Packing Line</option>
+    <option>A03-GF Packing Line</option>
+  </select>
+
+  <label>Shift:</label>
+  <div class="radio-group">
+    <input type="radio" name="shift" value="AS"> AS
+    <input type="radio" name="shift" value="BS"> BS
+    <input type="radio" name="shift" value="CS"> CS
+  </div>
+
+  <label>COS OQC:</label>
+  <input type="number" id="cos" oninput="generateIssues('cos','cosIssues')">
+  <div id="cosIssues"></div>
+
+  <label>OBA 1:</label>
+  <input type="number" id="oba1" oninput="generateIssues('oba1','oba1Issues')">
+  <div id="oba1Issues"></div>
+
+  <label>OBA 2:</label>
+  <input type="number" id="oba2" oninput="generateIssues('oba2','oba2Issues')">
+  <div id="oba2Issues"></div>
+
+  <label><input type="checkbox" id="report"> Reports Shared</label>
+  <label><input type="checkbox" id="repair"> Repair Check-in</label>
+
+  <label>Name:</label>
+  <input type="text" id="name">
+
+  <button onclick="copyData()">Copy</button>
+  <button onclick="clearForm()">Clear</button>
+
+</div>
+
+<script>
+
+// Format date
+function formatDate(dateStr) {
+  let parts = dateStr.split("-");
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// Generate issue inputs
+function generateIssues(inputId, containerId) {
+  let value = parseInt(document.getElementById(inputId).value) || 0;
+  let container = document.getElementById(containerId);
+
+  container.innerHTML = "";
+
+  for (let i = 1; i <= value; i++) {
+    let input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Issue " + i;
+    input.className = "issueInput";
+
+    input.addEventListener("input", () => {
+      input.classList.remove("error");
+    });
+
+    container.appendChild(input);
+  }
+}
+
+// Get shift
+function getShift() {
+  let shifts = document.getElementsByName("shift");
+  for (let s of shifts) {
+    if (s.checked) return s.value;
+  }
+  return "";
+}
+
+// Validate issues
+function validateIssues(containerId, count) {
+  let inputs = document.getElementById(containerId).getElementsByClassName("issueInput");
+  let valid = true;
+
+  if (count >= 1) {
+    for (let input of inputs) {
+      if (input.value.trim() === "") {
+        input.classList.add("error");
+        valid = false;
+      }
+    }
+  }
+
+  return valid;
+}
+
+// Clear errors
+function clearErrors() {
+  document.querySelectorAll(".error").forEach(el => {
+    el.classList.remove("error");
+  });
+}
+
+// Format issues
+function formatIssues(label, count, containerId) {
+  let inputs = document.getElementById(containerId).getElementsByClassName("issueInput");
+
+  let suffix = "";
+  if (label === "COS OQC") suffix = " Fail";
+  if (label === "OBA 1" || label === "OBA 2") suffix = " NG";
+
+  let text = `■ *${label}:* ${count}x${suffix}`;
+
+  if (count >= 1) {
+    text += "\n";
+    for (let i = 0; i < inputs.length; i++) {
+      text += `    • ${inputs[i].value}\n`;
+    }
+  }
+
+  return text;
+}
+
+// Copy function
+function copyData() {
+
+  clearErrors();
+
+  let isValid = true;
+
+  let date = document.getElementById("date");
+  let shift = getShift();
+  let name = document.getElementById("name");
+
+  let cos = document.getElementById("cos").value;
+  let oba1 = document.getElementById("oba1").value;
+  let oba2 = document.getElementById("oba2").value;
+
+  if (!date.value) {
+    date.classList.add("error");
+    isValid = false;
+  }
+
+  if (!shift) {
+    document.querySelector(".radio-group").classList.add("error");
+    isValid = false;
+  }
+
+  if (!name.value.trim()) {
+    name.classList.add("error");
+    isValid = false;
+  }
+
+  if (!validateIssues("cosIssues", cos)) isValid = false;
+  if (!validateIssues("oba1Issues", oba1)) isValid = false;
+  if (!validateIssues("oba2Issues", oba2)) isValid = false;
+
+  if (!isValid) return;
+
+  let formattedDate = formatDate(date.value);
+  let line = document.getElementById("line").value;
+
+  let reportText = document.getElementById("report").checked ? "*Reports Shared:* Done\n" : "";
+  let repairText = document.getElementById("repair").checked ? "*Repair check-in:* Done\n" : "";
+
+  let text = 
+`Date: *${formattedDate}*
+Line: *${line}*
+Shift: *${shift}*
+
+${formatIssues("COS OQC", cos, "cosIssues")}
+
+${formatIssues("OBA 1", oba1, "oba1Issues")}
+
+${formatIssues("OBA 2", oba2, "oba2Issues")}
+
+${reportText}${repairText}
+Regards,
+*${name.value}*`;
+
+  navigator.clipboard.writeText(text);
+  alert("Copied successfully!");
+}
+
+// Clear form
+function clearForm() {
+
+  document.getElementById("date").value = "";
+  document.getElementById("line").selectedIndex = 0;
+  document.getElementById("cos").value = "";
+  document.getElementById("oba1").value = "";
+  document.getElementById("oba2").value = "";
+  document.getElementById("name").value = "";
+
+  let shifts = document.getElementsByName("shift");
+  shifts.forEach(r => r.checked = false);
+
+  document.getElementById("report").checked = false;
+  document.getElementById("repair").checked = false;
+
+  document.getElementById("cosIssues").innerHTML = "";
+  document.getElementById("oba1Issues").innerHTML = "";
+  document.getElementById("oba2Issues").innerHTML = "";
+
+  clearErrors();
+}
+
+</script>
+
+</body>
+</html>
