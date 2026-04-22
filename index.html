@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Daily Report Tool</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #87c7d8;
+      margin: 0;
+      padding: 15px;
+    }
+
+    .container {
+      width: 100%;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-size: 18px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .radio-group input {
+      width: auto;
+      transform: scale(1.2);
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 14px;
+      font-size: 16px;
+      width: 100%;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .copy-btn {
+      background: black;
+      color: white;
+    }
+
+    .clear-btn {
+      background: gray;
+      color: white;
+    }
+
+    .issueRow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .issueInput {
+      flex: 1;
+    }
+
+    .removeBtn {
+      width: 40px;
+      height: 40px;
+      background: red;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error {
+      border: 2px solid red !important;
+    }
+
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <label>Date:</label>
+  <input type="date" id="date">
+
+  <label>Line:</label>
+  <select id="line">
+    <option>CKD Packing Line</option>
+    <option>SKD Packing Line</option>
+    <option>A03-GF Packing Line</option>
+  </select>
+
+  <label>Shift:</label>
+  <div class="radio-group">
+    <label><input type="radio" name="shift" value="AS"> AS</label>
+    <label><input type="radio" name="shift" value="BS"> BS</label>
+    <label><input type="radio" name="shift" value="CS"> CS</label>
+  </div>
+
+  <label>COS OQC:</label>
+  <input type="number" id="cos" oninput="generateIssues('cos','cosIssues')">
+  <div id="cosIssues"></div>
+
+  <label>OBA 1:</label>
+  <input type="number" id="oba1" oninput="generateIssues('oba1','oba1Issues')">
+  <div id="oba1Issues"></div>
+
+  <label>OBA 2:</label>
+  <input type="number" id="oba2" oninput="generateIssues('oba2','oba2Issues')">
+  <div id="oba2Issues"></div>
+
+  <label><input type="checkbox" id="noteToggle" onclick="toggleNote()"> Add Note</label>
+  <textarea id="note" class="hidden" placeholder="Enter note..."></textarea>
+
+  <label><input type="checkbox" id="report"> Reports Shared</label>
+  <label><input type="checkbox" id="repair"> Repair Check-in</label>
+
+  <label>Name:</label>
+  <input type="text" id="name">
+
+  <button class="copy-btn" onclick="copyData()">Copy</button>
+  <button class="clear-btn" onclick="clearForm()">Clear</button>
+
+</div>
+
+<script>
+
+// Toggle note
+function toggleNote() {
+  document.getElementById("note").classList.toggle("hidden");
+}
+
+// Format date
+function formatDate(d) {
+  let p = d.split("-");
+  return `${p[2]}/${p[1]}/${p[0]}`;
+}
+
+// Generate issue inputs
+function generateIssues(id, cid) {
+  let value = parseInt(document.getElementById(id).value) || 0;
+  let container = document.getElementById(cid);
+  container.innerHTML = "";
+
+  for (let i = 0; i < value; i++) {
+    let row = document.createElement("div");
+    row.className = "issueRow";
+
+    let input = document.createElement("input");
+    input.className = "issueInput";
+    input.placeholder = "Issue";
+
+    let btn = document.createElement("button");
+    btn.innerText = "❌";
+    btn.className = "removeBtn";
+    btn.onclick = () => row.remove();
+
+    row.appendChild(input);
+    row.appendChild(btn);
+    container.appendChild(row);
+  }
+}
+
+// Get shift
+function getShift() {
+  let s = document.getElementsByName("shift");
+  for (let i = 0; i < s.length; i++) {
+    if (s[i].checked) return s[i].value;
+  }
+  return "";
+}
+
+// Format issues
+function formatIssues(label, count, id) {
+  let rows = document.getElementById(id).children;
+  let suffix = label === "COS OQC" ? " Fail" : " NG";
+
+  let text = `■ *${label}:* ${count}x${suffix}`;
+  for (let i = 0; i < rows.length; i++) {
+    text += `\n    • ${rows[i].querySelector("input").value}`;
+  }
+  return text;
+}
+
+// Copy function
+function copyData() {
+
+  let date = document.getElementById("date").value;
+  let line = document.getElementById("line").value;
+  let shift = getShift();
+  let name = document.getElementById("name").value;
+
+  let cos = document.getElementById("cos").value;
+  let oba1 = document.getElementById("oba1").value;
+  let oba2 = document.getElementById("oba2").value;
+
+  if (!date || !shift || !name) {
+    alert("Fill required fields");
+    return;
+  }
+
+  let output = [];
+
+  output.push(`Date: *${formatDate(date)}*`);
+  output.push(`Line: *${line}*`);
+  output.push(`Shift: *${shift}*`);
+
+  output.push("");
+  output.push(formatIssues("COS OQC", cos, "cosIssues"));
+
+  output.push("");
+  output.push(formatIssues("OBA 1", oba1, "oba1Issues"));
+
+  output.push("");
+  output.push(formatIssues("OBA 2", oba2, "oba2Issues"));
+
+  let note = document.getElementById("note");
+  if (!note.classList.contains("hidden") && note.value.trim()) {
+    output.push("");
+    output.push(`*Note:* ${note.value}`);
+  }
+
+  if (report.checked) {
+    output.push("");
+    output.push("*Reports Shared:* Done");
+  }
+
+  if (repair.checked) {
+    output.push("*Repair check-in:* Done");
+  }
+
+  output.push("");
+  output.push("Regards,");
+  output.push(`*${name}*`);
+
+  let text = output.join("\n");
+
+  navigator.clipboard.writeText(text)
+    .then(() => alert("Copied!"))
+    .catch(() => {
+      let temp = document.createElement("textarea");
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      document.body.removeChild(temp);
+      alert("Copied!");
+    });
+}
+
+// Clear form
+function clearForm() {
+  document.querySelectorAll("input").forEach(i => i.value = "");
+  document.querySelectorAll("input[type=radio],input[type=checkbox]").forEach(i => i.checked = false);
+
+  cosIssues.innerHTML = "";
+  oba1Issues.innerHTML = "";
+  oba2Issues.innerHTML = "";
+
+  note.value = "";
+  note.classList.add("hidden");
+}
+
+</script>
+
+</body>
+</html>
